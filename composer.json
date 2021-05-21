@@ -22,9 +22,5 @@
       "src/PubSub/Server.php"
     ]
   },
-  "require-dev": {
-    "symfony/console": " ^3.0",
-    "guzzlehttp/guzzle": "^7.0"
-  },
   "minimum-stability": "dev"
 }
