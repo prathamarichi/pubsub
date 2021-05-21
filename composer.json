@@ -3,7 +3,7 @@
   "description": "Pub/Sub Manager",
   "type": "library",
   "require": {
-    "php": ">=7.2.0",
+    "php": ">=7.1.0",
     "google/cloud-pubsub": "^1.29"
   },
   "license": "proprietary",
@@ -21,6 +21,10 @@
       "src/PubSub/Client.php",
       "src/PubSub/Server.php"
     ]
+  },
+  "require-dev": {
+    "symfony/console": " ^3.0",
+    "guzzlehttp/guzzle": "^7.0"
   },
   "minimum-stability": "dev"
 }
