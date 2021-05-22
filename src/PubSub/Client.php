@@ -18,19 +18,41 @@ class Client {
         ]);
     }
 
-    public function getSubscribers($projectName) {
-        foreach ($this->_pubsub->subscriptions() as $subscription) {
-            printf('Subscription: %s' . PHP_EOL, $subscription->name());
+    public function getSubscribers($projectName=false, $topicName=false) {
+        if ($topicName) {
+            $projectName = \strtoupper($projectName);
+    
+            $server = new Server($this->_config);
+            $topic = $server->getTopic($projectName, $topicName);
+            $subscribers = $topic->subscriptions();
+        } else {
+            $subscribers = $this->_pubsub->subscriptions();
         }
+
+        return $subscribers;
     }
 
-    public function getSubscriber($projectName, $subscriptionName) {
-        $subscription = $this->_pubsub->subscription($subscriptionName);
-        $policy = $subscription->iam()->policy();
-        print_r($policy);
+    public function getSubscriber($projectName, $topicName, $subscriptionName) {
+        $projectName = \strtoupper($projectName);
+        $subscriptionName = \strtoupper($projectName."-".$topicName."-".$subscriptionName);
+
+        $subscriber = $this->_pubsub->subscription($subscriptionName);
+
+        return $subscriber;
     }
 
-    public function createSubscription($projectName, $topicName, $subscriptionName) {
+    public function subscribe($projectName, $topicName, $subscriptionName) {
+        $projectName = \strtoupper($projectName);
+        $subscriptionName = \strtoupper($projectName."-".$topicName."-".$subscriptionName);
+
+        $server = new Server($this->_config);
+        $topic = $server->getCreateTopic($projectName, $topicName);
+
+        $subscription = $topic->subscription($subscriptionName);
+        $subscription->create();
+    }
+
+    public function unsubscribe($projectName, $topicName, $subscriptionName) {
         $projectName = \strtoupper($projectName);
         $subscriptionName = \strtoupper($projectName."-".$topicName."-".$subscriptionName);
 
@@ -38,7 +60,23 @@ class Client {
         $topic = $server->getTopic($projectName, $topicName);
 
         $subscription = $topic->subscription($subscriptionName);
-        $subscription->create();
+        $subscription->delete();
+        
+        return true;
+    }
+
+    public function clean() {
+        $subscribers = $this->getSubscribers();
+        foreach ($subscribers as $subscriber) {
+            $subscriber = $subscriber->__debugInfo();
+            $topicName = \explode("/topics/", $subscriber["topicName"]);
+            if (isset($topicName[1]) && $topicName[1] === "_deleted-topic_") {
+                $subscription = $this->_pubsub->subscription($subscriber["name"]);
+                $subscription->delete();
+            }
+        }
+        
+        return true;
     }
 
     public function pullMessages($projectName, $topicName, $subscriptionName) {

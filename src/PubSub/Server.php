@@ -27,11 +27,14 @@ class Server {
         return $topics;
     }
 
-    protected function createTopic($projectName, $topicName, $raw=false) {
+    public function createTopic($projectName, $topicName, $raw=false) {
         $topic = false;
 
         try {
-            if (!$raw) $topicName = $projectName."-".$topicName;
+            if (!$raw) {
+                $projectName = \strtoupper($projectName);
+                $topicName = $projectName.\strtoupper("-".$topicName);
+            }
 
             //add to json file
             $path = __DIR__."/../../storage/pubsub";
@@ -49,24 +52,68 @@ class Server {
                 file_put_contents($file, $content);
             }
         } catch (\Exception $e) {
-            //do nothing
+            throw new \Exception($e->getMessage());
         }
 
         return $topic;
     }
 
+    public function checkTopic($projectName, $topicName, $raw=false) {
+        $topic = false;
+
+        if (!$raw) {
+            $projectName = \strtoupper($projectName);
+            $topicName = $projectName.\strtoupper("-".$topicName);
+        }
+        
+        //check json file
+        $path = __DIR__."/../../storage/pubsub";
+        if (!file_exists($path)) mkdir($path, 0777, true);
+
+        $file = $path."/".\strtolower($projectName).".json";
+        if (file_exists($file)) $content = json_decode(file_get_contents($file), true);
+        else $content = array();
+
+        if (!in_array($topicName, $content)) {
+            return false;
+        }
+
+        return true;
+    }
+
     public function getTopic($projectName, $topicName, $raw=false) {
         $topic = false;
 
-        if (!$raw) $topicName = $projectName."-".$topicName;
+        if (!$raw) {
+            $projectName = \strtoupper($projectName);
+            $topicName = $projectName.\strtoupper("-".$topicName);
+        }
         $topic = $this->_pubsub->topic($topicName);
 
         return $topic;
     }
 
-    protected function deleteTopic($projectName, $topicName, $raw=false) {
+    public function getCreateTopic($projectName, $topicName, $raw=false) {
+        $topic = false;
+
+        if ($this->checkTopic($projectName, $topicName, $raw)) {
+            echo "exist";
+            $topic = $this->getTopic($projectName, $topicName, $raw);
+        } else {
+            echo "not exist";
+            $topic = $this->createTopic($projectName, $topicName, $raw);
+        }
+
+        return $topic;
+    }
+
+    public function deleteTopic($projectName, $topicName, $raw=false) {
         try {
-            if (!$raw) $topicName = $projectName."-".$topicName;
+            if (!$raw) {
+                $projectName = \strtoupper($projectName);
+                $topicName = $projectName.\strtoupper("-".$topicName);
+            }
+
             $topic = $this->_pubsub->topic($topicName);
             $topic->delete();
     
@@ -85,7 +132,7 @@ class Server {
                 file_put_contents($file, $content);
             }
         } catch (\Exception $e) {
-            //do nothing
+            throw new \Exception($e->getMessage());
         }
 
         return true;
@@ -93,7 +140,11 @@ class Server {
 
     protected function publish($projectName, $topicName, $message, $raw=false) {
         try {
-            if (!$raw) $topicName = $projectName."-".$topicName;
+            if (!$raw) {
+                $projectName = \strtoupper($projectName);
+                $topicName = $projectName.\strtoupper("-".$topicName);
+            }
+            
             $topic = $this->_pubsub->topic($topicName);
             $message = $topic->publish(['data' => $message]);
         } catch (\Exception $e) {
@@ -121,6 +172,15 @@ class Server {
         return true;
     }
 
+    public function getTopics($projectName) {
+        $projectName = \strtoupper($projectName);
+
+        //delete all project lefts
+        $topics = $this->listProject();
+
+        return $topics;
+    }
+
     public function deleteProject($projectName) {
         $projectName = \strtoupper($projectName);
 
@@ -145,11 +205,16 @@ class Server {
         $topics = __DIR__."/../../storage/pubsub/".\strtolower($projectName).".json";
         if (file_exists($topics)) unlink($topics);
 
+        //delete subscriptions
+        $client = new Client($this->_config);
+        $client->clean();
+
         return true;
     }
 
     public function publishMessage($projectName, $topicName, $message, $expiredAt=false) {
         $projectName = \strtoupper($projectName);
+        $this->getCreateTopic($projectName, $topicName);
 
         if ($expiredAt) $expiredAt = \strtotime("+4 hours");
         else $expiredAt = \strtotime("+4 hours");
