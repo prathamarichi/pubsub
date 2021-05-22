@@ -57,16 +57,16 @@ class Subscriber {
 
     public function create($projectName, $topicName, $subscriberName) {
         $subscription = false;
+        $projectLibrary = new Project($this->_config);
+        $projectName = $projectLibrary->generateProjectName($projectName);
+
+        $topicLibrary = new Topic($this->_config);
+        $topicName = $topicLibrary->generateTopicName($projectName, $topicName);
+        $topic = $topicLibrary->upsert($projectName, $topicName);
+
+        $subscriberName = $this->generateSubscriberName($topicName, $subscriberName);
 
         do {
-            $projectLibrary = new Project($this->_config);
-            $projectName = $projectLibrary->generateProjectName($projectName);
-    
-            $topicLibrary = new Topic($this->_config);
-            $topicName = $topicLibrary->generateTopicName($projectName, $topicName);
-            $topic = $topicLibrary->upsert($projectName, $topicName);
-
-            $subscriberName = $this->generateSubscriberName($topicName, $subscriberName);
             $subscription = $topic->subscription($subscriberName);
             $subscription->create();
         } while (!$subscription);

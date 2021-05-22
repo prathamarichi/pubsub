@@ -74,12 +74,12 @@ class Topic {
     public function create($projectName, $topicName) {
         $topic = false;
 
+        $projectLibrary = new Project($this->_config);
+        $projectName = $projectLibrary->generateProjectName($projectName);
+        $topicName = $this->generateTopicName($projectName, $topicName);
+
         do {
             try {
-                $projectLibrary = new Project($this->_config);
-                $projectName = $projectLibrary->generateProjectName($projectName);
-                $topicName = $this->generateTopicName($projectName, $topicName);
-    
                 //add to json file
                 $path = __DIR__."/../../storage/pubsub";
                 if (!file_exists($path)) mkdir($path, 0777, true);
@@ -121,14 +121,14 @@ class Topic {
     public function delete($projectName, $topicName, $raw=false) {
         $success = false;
 
+        if ($raw) {
+            $projectLibrary = new Project($this->_config);
+            $projectName = $projectLibrary->generateProjectName($projectName);
+            $topicName = $this->generateTopicName($projectName, $topicName);
+        }
+
         do {
             try {
-                if ($raw) {
-                    $projectLibrary = new Project($this->_config);
-                    $projectName = $projectLibrary->generateProjectName($projectName);
-                    $topicName = $this->generateTopicName($projectName, $topicName);
-                }
-    
                 $topic = $this->_pubsub->topic($topicName);
                 $topic->delete();
         
