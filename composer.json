@@ -15,11 +15,12 @@
   ],
   "autoload": {
     "psr-4": {
-      "PubSub\\": "src/PubSub/"
+      "RichPubSub\\": "src/PubSub/"
     },
     "files": [
-      "src/PubSub/Client.php",
-      "src/PubSub/Server.php"
+      "src/PubSub/Project.php",
+      "src/PubSub/Topic.php",
+      "src/PubSub/Subscriber.php"
     ]
   },
   "require-dev": {
