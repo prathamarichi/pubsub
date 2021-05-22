@@ -42,14 +42,18 @@ class Client {
     }
 
     public function subscribe($projectName, $topicName, $subscriptionName) {
-        $projectName = \strtoupper($projectName);
-        $subscriptionName = \strtoupper($projectName."-".$topicName."-".$subscriptionName);
+        $subscription = false;
 
-        $server = new Server($this->_config);
-        $topic = $server->getCreateTopic($projectName, $topicName);
-
-        $subscription = $topic->subscription($subscriptionName);
-        $subscription->create();
+        do {
+            $projectName = \strtoupper($projectName);
+            $subscriptionName = \strtoupper($projectName."-".$topicName."-".$subscriptionName);
+    
+            $server = new Server($this->_config);
+            $topic = $server->getCreateTopic($projectName, $topicName);
+    
+            $subscription = $topic->subscription($subscriptionName);
+            $subscription->create();
+        } while (!$subscription);
     }
 
     public function unsubscribe($projectName, $topicName, $subscriptionName) {

@@ -18,6 +18,11 @@ class Server {
         ]);
     }
 
+    protected function isJson($string) {
+        json_decode($string);
+        return json_last_error() === JSON_ERROR_NONE;
+     }
+
     public function listProject() {
         $topics = array();
         foreach ($this->_pubsub->topics() as $topic) {
@@ -30,30 +35,38 @@ class Server {
     public function createTopic($projectName, $topicName, $raw=false) {
         $topic = false;
 
-        try {
-            if (!$raw) {
-                $projectName = \strtoupper($projectName);
-                $topicName = $projectName.\strtoupper("-".$topicName);
+        do {
+            try {
+                if (!$raw) {
+                    $projectName = \strtoupper($projectName);
+                    $topicName = $projectName.\strtoupper("-".$topicName);
+                }
+    
+                //add to json file
+                $path = __DIR__."/../../storage/pubsub";
+                if (!file_exists($path)) mkdir($path, 0777, true);
+    
+                $file = $path."/".\strtolower($projectName).".json";
+                if (file_exists($file)) $content = json_decode(file_get_contents($file), true);
+                else $content = array();
+    
+                if (!in_array($topicName, $content)) {
+                    $content[] = $topicName;
+                    $topic = $this->_pubsub->createTopic($topicName);
+    
+                    $content = json_encode($content);
+                    file_put_contents($file, $content);
+                }
+            } catch (\Exception $e) {
+                if ($this->isJson($e->getMessage())) {
+                    $error = \json_decode($e->getMessage());
+                    if (isset($error->error)) {
+                        $topic = true;
+                        throw new \Exception('Error: '.$e->getMessage());
+                    }
+                }
             }
-
-            //add to json file
-            $path = __DIR__."/../../storage/pubsub";
-            if (!file_exists($path)) mkdir($path, 0777, true);
-
-            $file = $path."/".\strtolower($projectName).".json";
-            if (file_exists($file)) $content = json_decode(file_get_contents($file), true);
-            else $content = array();
-
-            if (!in_array($topicName, $content)) {
-                $content[] = $topicName;
-                $topic = $this->_pubsub->createTopic($topicName);
-
-                $content = json_encode($content);
-                file_put_contents($file, $content);
-            }
-        } catch (\Exception $e) {
-            throw new \Exception($e->getMessage());
-        }
+        } while (!$topic);
 
         return $topic;
     }
@@ -97,10 +110,8 @@ class Server {
         $topic = false;
 
         if ($this->checkTopic($projectName, $topicName, $raw)) {
-            echo "exist";
             $topic = $this->getTopic($projectName, $topicName, $raw);
         } else {
-            echo "not exist";
             $topic = $this->createTopic($projectName, $topicName, $raw);
         }
 
@@ -108,32 +119,44 @@ class Server {
     }
 
     public function deleteTopic($projectName, $topicName, $raw=false) {
-        try {
-            if (!$raw) {
-                $projectName = \strtoupper($projectName);
-                $topicName = $projectName.\strtoupper("-".$topicName);
-            }
+        $success = false;
 
-            $topic = $this->_pubsub->topic($topicName);
-            $topic->delete();
+        do {
+            try {
+                if (!$raw) {
+                    $projectName = \strtoupper($projectName);
+                    $topicName = $projectName.\strtoupper("-".$topicName);
+                }
     
-            //remove from json file
-            $path = __DIR__."/../../storage/pubsub";
-            if (!file_exists($path)) mkdir($path, 0777, true);
+                $topic = $this->_pubsub->topic($topicName);
+                $topic->delete();
+        
+                //remove from json file
+                $path = __DIR__."/../../storage/pubsub";
+                if (!file_exists($path)) mkdir($path, 0777, true);
+    
+                $file = $path."/".\strtolower($projectName).".json";
+                if (file_exists($file)) $content = json_decode(file_get_contents($file), true);
+                else $content = array();
+    
+                if (in_array($topicName, $content)) {
+                    if (($pos = array_search($topicName, $content)) !== false) unset($content[$pos]);
+    
+                    $content = json_encode($content);
+                    file_put_contents($file, $content);
+                }
 
-            $file = $path."/".\strtolower($projectName).".json";
-            if (file_exists($file)) $content = json_decode(file_get_contents($file), true);
-            else $content = array();
-
-            if (in_array($topicName, $content)) {
-                if (($pos = array_search($topicName, $content)) !== false) unset($content[$pos]);
-
-                $content = json_encode($content);
-                file_put_contents($file, $content);
+                $success = true;
+            } catch (\Exception $e) {
+                if ($this->isJson($e->getMessage())) {
+                    $error = \json_decode($e->getMessage());
+                    if (isset($error->error)) {
+                        $success = true;
+                        throw new \Exception('Error: '.$e->getMessage());
+                    }
+                }
             }
-        } catch (\Exception $e) {
-            throw new \Exception($e->getMessage());
-        }
+        } while (!$success);
 
         return true;
     }
@@ -183,18 +206,19 @@ class Server {
 
     public function deleteProject($projectName) {
         $projectName = \strtoupper($projectName);
+        
+        //check json file
+        $path = __DIR__."/../../storage/pubsub";
+        if (!file_exists($path)) mkdir($path, 0777, true);
 
-        $topicName = "notification";
-        $this->deleteTopic($projectName, $topicName);
+        $file = $path."/".\strtolower($projectName).".json";
+        if (file_exists($file)) $content = json_decode(file_get_contents($file), true);
+        else $content = array();
 
-        $topicName = "transaction";
-        $this->deleteTopic($projectName, $topicName);
-
-        $topicName = "export";
-        $this->deleteTopic($projectName, $topicName);
-
-        $topicName = "general";
-        $this->deleteTopic($projectName, $topicName);
+        foreach ($content as $topicName) {
+            $topicName = substr($topicName, strlen($projectName)+1);
+            $this->deleteTopic($projectName, $topicName);
+        }
 
         //delete all project lefts
         $topics = $this->listProject();
