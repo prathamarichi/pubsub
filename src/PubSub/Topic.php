@@ -89,9 +89,9 @@ class Topic {
                 else $content = array();
     
                 if (!in_array($topicName, $content)) {
-                    $content[] = $topicName;
                     $topic = $this->_pubsub->createTopic($topicName);
-    
+                    
+                    $content[] = $topicName;
                     $content = json_encode($content);
                     file_put_contents($file, $content);
                 }
@@ -99,8 +99,15 @@ class Topic {
                 if ($this->isJson($e->getMessage())) {
                     $error = \json_decode($e->getMessage());
                     if (isset($error->error)) {
+                        $content[] = $topicName;
+                        $content = json_encode($content);
+                        file_put_contents($file, $content);
+
                         $topic = true;
                         throw new \Exception('Error: '.$e->getMessage());
+                    } else {
+                        echo $topicName;
+                        var_dump($error);die;
                     }
                 }
             }
