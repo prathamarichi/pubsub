@@ -70,8 +70,8 @@ class Project {
         if (file_exists($topics)) unlink($topics);
 
         //delete subscriptions
-        $client = new Client($this->_config);
-        $client->clean();
+        $subscriberLibrary = new Subscriber($this->_config);
+        $subscriberLibrary->clean();
 
         return true;
     }

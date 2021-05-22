@@ -18,12 +18,21 @@ class Subscriber {
         ]);
     }
 
+    public function generateSubscriberName($topicName, $subscriberName) {
+        $subscriberName = $topicName."-".\strtoupper($subscriberName);
+
+        return $subscriberName;
+    }
+
     public function list($projectName=false, $topicName=false) {
         if ($topicName) {
-            $projectName = \strtoupper($projectName);
+            $projectLibrary = new Project($this->_config);
+            $projectName = $projectLibrary->generateProjectName($projectName);
     
             $topicLibrary = new Topic($this->_config);
+            $topicName = $topicLibrary->generateTopicName($projectName, $topicName);
             $topic = $topicLibrary->get($projectName, $topicName);
+            
             $subscribers = $topic->subscriptions();
         } else {
             $subscribers = $this->_pubsub->subscriptions();
@@ -46,48 +55,60 @@ class Subscriber {
         return true;
     }
 
-    public function create($projectName, $topicName, $subscriptionName) {
+    public function create($projectName, $topicName, $subscriberName) {
         $subscription = false;
 
         do {
-            $projectName = \strtoupper($projectName);
-            $subscriptionName = \strtoupper($projectName."-".$topicName."-".$subscriptionName);
+            $projectLibrary = new Project($this->_config);
+            $projectName = $projectLibrary->generateProjectName($projectName);
     
             $topicLibrary = new Topic($this->_config);
+            $topicName = $topicLibrary->generateTopicName($projectName, $topicName);
             $topic = $topicLibrary->upsert($projectName, $topicName);
-    
-            $subscription = $topic->subscription($subscriptionName);
+
+            $subscriberName = $this->generateSubscriberName($topicName, $subscriberName);
+            $subscription = $topic->subscription($subscriberName);
             $subscription->create();
         } while (!$subscription);
     }
 
-    public function get($projectName, $topicName, $subscriptionName) {
-        $projectName = \strtoupper($projectName);
-        $subscriptionName = \strtoupper($projectName."-".$topicName."-".$subscriptionName);
+    public function get($projectName, $topicName, $subscriberName) {
+        $projectLibrary = new Project($this->_config);
+        $projectName = $projectLibrary->generateProjectName($projectName);
 
-        $subscriber = $this->_pubsub->subscription($subscriptionName);
+        $topicLibrary = new Topic($this->_config);
+        $topicName = $topicLibrary->generateTopicName($projectName, $topicName);
+
+        $subscriberName = $this->generateSubscriberName($topicName, $subscriberName);
+        $subscriber = $this->_pubsub->subscription($subscriberName);
 
         return $subscriber;
     }
 
-    public function delete($projectName, $topicName, $subscriptionName) {
-        $projectName = \strtoupper($projectName);
-        $subscriptionName = \strtoupper($projectName."-".$topicName."-".$subscriptionName);
+    public function delete($projectName, $topicName, $subscriberName) {
+        $projectLibrary = new Project($this->_config);
+        $projectName = $projectLibrary->generateProjectName($projectName);
 
         $topicLibrary = new Topic($this->_config);
+        $topicName = $topicLibrary->generateTopicName($projectName, $topicName);
         $topic = $topicLibrary->get($projectName, $topicName);
-
-        $subscription = $topic->subscription($subscriptionName);
+        
+        $subscriberName = $this->generateSubscriberName($topicName, $subscriberName);
+        $subscription = $topic->subscription($subscriberName);
         $subscription->delete();
         
         return true;
     }
 
-    public function pull($projectName, $topicName, $subscriptionName) {
-        $projectName = \strtoupper($projectName);
-        $subscriptionName = \strtoupper($projectName."-".$topicName."-".$subscriptionName);
+    public function pull($projectName, $topicName, $subscriberName) {
+        $projectLibrary = new Project($this->_config);
+        $projectName = $projectLibrary->generateProjectName($projectName);
 
-        $subscription = $this->_pubsub->subscription($subscriptionName);
+        $topicLibrary = new Topic($this->_config);
+        $topicName = $topicLibrary->generateTopicName($projectName, $topicName);
+
+        $subscriberName = $this->generateSubscriberName($topicName, $subscriberName);
+        $subscription = $this->_pubsub->subscription($subscriberName);
         foreach ($subscription->pull() as $message) {
             $subscription->acknowledge($message);
         }

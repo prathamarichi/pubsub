@@ -24,18 +24,19 @@ class Topic {
     }
 
     public function generateTopicName($projectName, $topicName) {
-        $topicName = $projectName.\strtoupper("-".$topicName);
+        // $topicName = $projectName.\strtoupper("-".$topicName);
+        $topicName = $projectName."-".$topicName;
 
         return $topicName;
     }
 
-    public function upsert($projectName, $topicName, $raw=false) {
+    public function upsert($projectName, $topicName) {
         $topic = false;
 
         if ($this->exist($projectName, $topicName)) {
-            $topic = $this->get($projectName, $topicName, $raw);
+            $topic = $this->get($projectName, $topicName);
         } else {
-            $topic = $this->create($projectName, $topicName, $raw);
+            $topic = $this->create($projectName, $topicName);
         }
 
         return $topic;
@@ -162,8 +163,11 @@ class Topic {
     }
 
     public function publish($projectName, $topicName, $message, $expiredAt=false) {
-        $projectName = \strtoupper($projectName);
         $this->upsert($projectName, $topicName);
+
+        $projectLibrary = new Project($this->_config);
+        $projectName = $projectLibrary->generateProjectName($projectName);
+        $topicName = $this->generateTopicName($projectName, $topicName);
 
         if ($expiredAt) $expiredAt = \strtotime("+4 hours");
         else $expiredAt = \strtotime("+4 hours");
@@ -172,7 +176,9 @@ class Topic {
             "content" => $message,
             "expired_at" => $expiredAt
         );
-        $message = $this->publish($projectName, $topicName, json_encode($data));
+        $message = json_encode($data);
+        $topic = $this->_pubsub->topic($topicName);
+        $message = $topic->publish(['data' => $message]);
 
         return $message;
     }
