@@ -28,16 +28,16 @@ class Project {
         $topicLibrary = new Topic($this->_config);
         $projectName = $this->generateProjectName($projectName);
 
-        $topicName = "notification";
+        $topicName = "NOTIFICATION";
         $topicLibrary->upsert($projectName, $topicName);
 
-        $topicName = "transaction";
+        $topicName = "TRANSACTION";
         $topicLibrary->upsert($projectName, $topicName);
 
-        $topicName = "export";
+        $topicName = "EXPORT";
         $topicLibrary->upsert($projectName, $topicName);
 
-        $topicName = "general";
+        $topicName = "GENERAL";
         $topicLibrary->upsert($projectName, $topicName);
 
         return true;
