@@ -72,8 +72,6 @@ class Topic {
     }
 
     public function create($projectName, $topicName) {
-        $topic = false;
-
         $projectLibrary = new Project($this->_config);
         $projectName = $projectLibrary->generateProjectName($projectName);
         $topicName = $this->generateTopicName($projectName, $topicName);
@@ -104,10 +102,7 @@ class Topic {
                         file_put_contents($file, $content);
 
                         $topic = true;
-                        throw new \Exception('Error: '.$e->getMessage());
-                    } else {
-                        echo $topicName;
-                        var_dump($error);die;
+                        return false;
                     }
                 }
             }
