@@ -18,40 +18,18 @@ class Topic {
         ]);
     }
 
-    protected function isJson($string) {
-        json_decode($string);
-        return json_last_error() === JSON_ERROR_NONE;
-    }
-
     public function generateTopicName($projectName, $topicName) {
-        // $topicName = $projectName.\strtoupper("-".$topicName);
         $topicName = $projectName."-".$topicName;
 
         return $topicName;
     }
 
-    public function upsert($projectName, $topicName) {
-        $topic = false;
-
-        if ($this->exist($projectName, $topicName)) {
-            $topic = $this->get($projectName, $topicName);
-        } else {
-            $topic = $this->create($projectName, $topicName);
-        }
-
-        return $topic;
-    }
-
-    public function exist($projectName, $topicName) {
-        $projectLibrary = new Project($this->_config);
-        $projectName = $projectLibrary->generateProjectName($projectName);
-        $topicName = $this->generateTopicName($projectName, $topicName);
-        
+    public function exist($topicName) {
         //check json file
-        $path = __DIR__."/../../storage/pubsub";
+        $path = realpath(".")."/public/storage/pubsub";
         if (!file_exists($path)) mkdir($path, 0777, true);
 
-        $file = $path."/".\strtolower($projectName).".json";
+        $file = $path."/topic.json";
         if (file_exists($file)) $content = json_decode(file_get_contents($file), true);
         else $content = array();
 
@@ -60,6 +38,18 @@ class Topic {
         }
 
         return true;
+    }
+
+    public function upsert($topicName) {
+        $topic = false;
+
+        if ($this->exist($topicName)) {
+            $topic = $this->get($topicName);
+        } else {
+            $topic = $this->create($topicName);
+        }
+
+        return $topic;
     }
 
     public function list() {
@@ -71,18 +61,14 @@ class Topic {
         return $topics;
     }
 
-    public function create($projectName, $topicName) {
-        $projectLibrary = new Project($this->_config);
-        $projectName = $projectLibrary->generateProjectName($projectName);
-        $topicName = $this->generateTopicName($projectName, $topicName);
-
+    public function create($topicName) {
         do {
             try {
                 //add to json file
-                $path = __DIR__."/../../storage/pubsub";
+                $path = realpath(".")."/public/storage/pubsub";
                 if (!file_exists($path)) mkdir($path, 0777, true);
     
-                $file = $path."/".\strtolower($projectName).".json";
+                $file = $path."/topic.json";
                 if (file_exists($file)) $content = json_decode(file_get_contents($file), true);
                 else $content = array();
     
@@ -94,7 +80,7 @@ class Topic {
                     file_put_contents($file, $content);
                 }
             } catch (\Exception $e) {
-                if ($this->isJson($e->getMessage())) {
+                if (General::isJson($e->getMessage())) {
                     $error = \json_decode($e->getMessage());
                     if (isset($error->error)) {
                         $content[] = $topicName;
@@ -111,34 +97,24 @@ class Topic {
         return $topic;
     }
 
-    public function get($projectName, $topicName) {
-        $projectLibrary = new Project($this->_config);
-        $projectName = $projectLibrary->generateProjectName($projectName);
-        $topicName = $this->generateTopicName($projectName, $topicName);
+    public function get($topicName) {
         $topic = $this->_pubsub->topic($topicName);
 
         return $topic;
     }
 
-    public function delete($projectName, $topicName, $raw=false) {
+    public function delete($topicName) {
         $success = false;
-
-        if ($raw) {
-            $projectLibrary = new Project($this->_config);
-            $projectName = $projectLibrary->generateProjectName($projectName);
-            $topicName = $this->generateTopicName($projectName, $topicName);
-        }
-
         do {
             try {
                 $topic = $this->_pubsub->topic($topicName);
                 $topic->delete();
         
                 //remove from json file
-                $path = __DIR__."/../../storage/pubsub";
+                $path = realpath(".")."/public/storage/pubsub";
                 if (!file_exists($path)) mkdir($path, 0777, true);
     
-                $file = $path."/".\strtolower($projectName).".json";
+                $file = $path."/topic.json";
                 if (file_exists($file)) $content = json_decode(file_get_contents($file), true);
                 else $content = array();
     
@@ -151,7 +127,7 @@ class Topic {
 
                 $success = true;
             } catch (\Exception $e) {
-                if ($this->isJson($e->getMessage())) {
+                if (General::isJson($e->getMessage())) {
                     $error = \json_decode($e->getMessage());
                     if (isset($error->error)) {
                         $success = true;
@@ -164,15 +140,11 @@ class Topic {
         return true;
     }
 
-    public function publish($projectName, $topicName, $message, $expiredAt=false) {
-        $this->upsert($projectName, $topicName);
+    public function publish($topicName, $message, $expiredAt=false) {
+        $this->upsert($topicName);
 
-        $projectLibrary = new Project($this->_config);
-        $projectName = $projectLibrary->generateProjectName($projectName);
-        $topicName = $this->generateTopicName($projectName, $topicName);
-
-        if ($expiredAt) $expiredAt = \strtotime("+4 hours");
-        else $expiredAt = \strtotime("+4 hours");
+        if ($expiredAt) $expiredAt = \strtotime("+2 hours");
+        else $expiredAt = \strtotime("+2 hours");
 
         $data = array(
             "content" => $message,

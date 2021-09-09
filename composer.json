@@ -18,6 +18,7 @@
       "RichPubSub\\": "src/PubSub/"
     },
     "files": [
+      "src/PubSub/General.php",
       "src/PubSub/Project.php",
       "src/PubSub/Topic.php",
       "src/PubSub/Subscriber.php"

@@ -18,8 +18,14 @@ class Subscriber {
         ]);
     }
 
+    function isJson($string) {
+        json_decode($string);
+        return json_last_error() === JSON_ERROR_NONE;
+     }
+
     public function generateSubscriberName($topicName, $subscriberName) {
-        $subscriberName = $topicName."-".\strtoupper($subscriberName);
+        // $subscriberName = $topicName."-".\strtoupper($subscriberName);
+        $subscriberName = \strtoupper($subscriberName);
 
         return $subscriberName;
     }
@@ -55,22 +61,36 @@ class Subscriber {
         return true;
     }
 
-    public function create($projectName, $topicName, $subscriberName) {
+    public function create($topicName, $subscriberName, $deleteIfExist=false) {
         $subscription = false;
-        $projectLibrary = new Project($this->_config);
-        $projectName = $projectLibrary->generateProjectName($projectName);
+        try {
+            $topicLibrary = new Topic($this->_config);
+            $topic = $topicLibrary->get($fullProjectName, $topicName);
+            if ($topic) {
+                $fullTopicName = $topicLibrary->generateTopicName($fullProjectName, $topicName);
+                
+                // $fullSubscriberName = $this->generateSubscriberName($fullTopicName, $subscriberName);
+    
+                do {
+                    $subscription = $topic->subscription($subscriberName);
+                    $subscription->create();
+                } while (!$subscription);
+            }
+        } catch (\Exception $e) {
+            $error = $e->getMessage();
+            if ($this->isJson($error)) {
+                $error = json_decode($error);
 
-        $topicLibrary = new Topic($this->_config);
-        $topic = $topicLibrary->get($projectName, $topicName);
-        if ($topic) {
-            $topicName = $topicLibrary->generateTopicName($projectName, $topicName);
-            
-            $subscriberName = $this->generateSubscriberName($topicName, $subscriberName);
+                if ($error->error->code === 409) {
+                    if ($deleteIfExist) {
+                        $this->delete($projectName, $topicName, $subscriberName);
+                        $this->create($projectName, $topicName, $subscriberName, false);
+                    }
+                    return true;
+                }
+            }
 
-            do {
-                $subscription = $topic->subscription($subscriberName);
-                $subscription->create();
-            } while (!$subscription);
+            throw new \Exception($e->getMessage());
         }
 
         return true;
@@ -83,7 +103,7 @@ class Subscriber {
         $topicLibrary = new Topic($this->_config);
         $topicName = $topicLibrary->generateTopicName($projectName, $topicName);
 
-        $subscriberName = $this->generateSubscriberName($topicName, $subscriberName);
+        // $subscriberName = $this->generateSubscriberName($topicName, $subscriberName);
         $subscriber = $this->_pubsub->subscription($subscriberName);
 
         return $subscriber;
@@ -98,7 +118,7 @@ class Subscriber {
         if ($topic) {
             $topicName = $topicLibrary->generateTopicName($projectName, $topicName);
 
-            $subscriberName = $this->generateSubscriberName($topicName, $subscriberName);
+            // $subscriberName = $this->generateSubscriberName($topicName, $subscriberName);
             $subscription = $topic->subscription($subscriberName);
             $subscription->delete();
         }
@@ -115,7 +135,7 @@ class Subscriber {
 
         $messages = array();
         try {
-            $subscriberName = $this->generateSubscriberName($topicName, $subscriberName);
+            // $subscriberName = $this->generateSubscriberName($topicName, $subscriberName);
             $subscription = $this->_pubsub->subscription($subscriberName);
     
             foreach ($subscription->pull() as $message) {
